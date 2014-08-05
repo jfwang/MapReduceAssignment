@@ -15,7 +15,6 @@ package zijing;
  */
 
 import java.io.IOException;
-import java.util.Iterator;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.conf.Configuration;
@@ -36,10 +35,18 @@ public class TorrentList {
 		private Text user = new Text();
 		
 		public void map(LongWritable key, Text value, Context context) throws IOException, InterruptedException {
-			StringTokenizer itr = new StringTokenizer(value.toString(), ",");
+			String[] str = value.toString().split("	");
+			
+			Text torrentId = new Text(str[0]);
+			String userList = "";
+			if(str.length > 1) {
+				userList = str[1];
+			}
+			StringTokenizer itr = new StringTokenizer(userList, ",");
+			
 			while (itr.hasMoreTokens()) {
 				user.set(itr.nextToken());
-				context.write(user, new Text(key.toString()));
+				context.write(user, torrentId);
 			}
 		}
 	}
@@ -49,16 +56,15 @@ public class TorrentList {
 		private Text result = new Text();
 
 		public void reduce(Text key, Iterable<Text> values,  Context context) throws IOException, InterruptedException {
-			Iterator<Text> it = values.iterator();
-			StringBuilder torrentList = new StringBuilder();
+			String torrentList = "";
 
-			while (it.hasNext()) {
+			for (Text val:values) {
 				if (torrentList.length() > 0) {
-					torrentList.append(",");
+					torrentList += ",";
 				}
-				torrentList.append(it.next().toString());
+				torrentList += val.toString();
 			}
-			result.set(torrentList.toString());
+			result.set(torrentList);
 			context.write(key, result);
 		}
 	}
